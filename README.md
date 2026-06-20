@@ -18,7 +18,7 @@
    推荐在浏览器中安装 [Tampermonkey (油猴)](https://www.tampermonkey.net/) 或 [Violentmonkey (暴力猴)](https://violentmonkey.github.io/) 扩展。
 2. **安装本脚本：**
    * **方式一 (推荐)：** 访问 [GreasyFork 页面](你的GreasyFork脚本链接) 并点击“安装此脚本”。
-   * **方式二：** 点击 [这里](https://raw.githubusercontent.com/YourUsername/bilibili-wali-vote/main/bilibili-wali-vote.user.js) 安装 Github 最新 Raw 版本。
+   * **方式二：** 点击 [这里](https://raw.githubusercontent.com/SlieFamily/bilibili-wali-vote/main/bilibili-wali-vote.user.js) 安装 Github 最新 Raw 版本。
 
 ## 🚀 使用方法
 
