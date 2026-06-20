@@ -5,6 +5,14 @@
 
 一款用于浏览器（Tampermonkey / Violentmonkey）的用户脚本，可自动抓取并覆写 Bilibili 瓦哩师徒杯 S3 投票页面的真实选票数据，消除“X万”的模糊显示，精确到个位数。
 
+## ✨ 功能展示
+
+| 使用前                                                       | 使用后                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| <img src="https://gcore.jsdelivr.net/gh/SlieFamily/TempImages@main//Auto/202606201849331.png" alt="image-20260620184734546"  /> | <img src="https://gcore.jsdelivr.net/gh/SlieFamily/TempImages@main//Auto/202606201850013.png" alt="image-20260620184650798"  /> |
+
+
+
 ## ✨ 核心功能
 
 * **精确显示：** 突破前端“万票”显示限制，直接调用 B 站后台 API 获取精确到个位的真实票数。
@@ -17,7 +25,7 @@
 1. **安装脚本管理器：**
    推荐在浏览器中安装 [Tampermonkey (油猴)](https://www.tampermonkey.net/) 或 [Violentmonkey (暴力猴)](https://violentmonkey.github.io/) 扩展。
 2. **安装本脚本：**
-   * **方式一 (推荐)：** 访问 [GreasyFork 页面](你的GreasyFork脚本链接) 并点击“安装此脚本”。
+   * **方式一 (推荐)：** 访问 [GreasyFork 页面](https://greasyfork.org/zh-CN/scripts/583568-b%E7%AB%99%E7%93%A6%E5%93%A9%E5%B8%88%E5%BE%92%E6%9D%AFs3%E7%9C%9F%E5%AE%9E%E7%A5%A8%E6%95%B0%E6%98%BE%E7%A4%BA) 并点击“安装此脚本”。
    * **方式二：** 点击 [这里](https://raw.githubusercontent.com/SlieFamily/bilibili-wali-vote/main/bilibili-wali-vote.user.js) 安装 Github 最新 Raw 版本。
 
 ## 🚀 使用方法
