@@ -118,7 +118,11 @@ export default function Home() {
       },
       grid: { top: 35, left: 10, right: 20, bottom: 35, containLabel: true },
       dataZoom: [
-        { type: 'inside', start: 0, end: 100 }, 
+        {
+          type: 'inside',
+          yAxisIndex: 0,
+          start: 0, end: 100
+        },
         { 
           type: 'slider', 
           show: true, 
@@ -277,7 +281,7 @@ export default function Home() {
       <div className='flex-none text-center pt-8 pb-2'>
         <h2 className='text-2xl font-black text-gray-900 tracking-tight'>📈 选手走势</h2>
         <p className='text-gray-500 mt-1 text-xs'>
-          交互技巧：<strong className="text-blue-500">点击图例</strong>可过滤选手 / <strong className="text-blue-500">鼠标悬浮点</strong>可查看瞬间票数 / <strong className="text-blue-500">滚轮</strong>可缩放时间轴
+          交互技巧：<strong className="text-blue-500">点击图例</strong>可过滤选手 / <strong className="text-blue-500">鼠标悬浮点</strong>可查看瞬间票数 / <strong className="text-blue-500">滚轮</strong>可缩放 y 轴
         </p>
       </div>
 
