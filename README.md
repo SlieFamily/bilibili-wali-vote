@@ -13,6 +13,8 @@
 
 ![截图展示](https://gcore.jsdelivr.net/gh/SlieFamily/TempImages@main//Auto/202606231416628.png)
 
+* **Demo访问：** https://vote.qslie.top
+
 * **功能特色：**
   * 📊 实时拉取 B 站后台 API，数据精确到个位。
   * 📈 内置晋级线计算，直观显示选手距离安全区/淘汰区的**差分票数**。
