@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import ReactECharts from 'echarts-for-react';
 
 interface Player {
   item_id: string;
@@ -10,18 +10,13 @@ interface Player {
   item: { title: string; pic: string; jump_url: string; };
 }
 
-// 动态生成足够多的、可区分的色值数组，不局限于蓝紫调
-const generateColorPalette = (count: number) => {
-  const palette = [];
-  for (let i = 0; i < count; i++) {
-    palette.push(`hsl(${(i * 360 / count) % 360}, 75%, 50%)`);
-  }
-  return palette;
-};
-
-// 分组色盘 (为师父组和徒弟组分别准备一个色盘，确保同组内不重复)
-const MASTER_PALETTE = generateColorPalette(50); // 预留50个容量，确保绝对够用
-const APPRENTICE_PALETTE = generateColorPalette(50);
+// 👑 精调高辨识度色盘
+const PREMIUM_COLORS = [
+  '#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4', 
+  '#F43F5E', '#84CC16', '#6366F1', '#EA580C', '#14B8A6', '#D946EF', 
+  '#EAB308', '#0EA5E9', '#F97316', '#22C55E', '#A855F7', '#EF4444', 
+  '#0284C7', '#C026D3', '#65A30D', '#2563EB', '#BE123C', '#059669'
+];
 
 export default function Home() {
   const [apprenticeData, setApprenticeData] = useState<Player[]>([]);
@@ -64,16 +59,10 @@ export default function Home() {
       setLastUpdated(currentTime);
 
       const currentSnapshot: any = { time: currentTime };
-      
-      // 全员数据写入快照
-      apprentices.forEach(p => {
-        currentSnapshot[`徒弟_${p.item.title}`] = p.vote;
-      });
-      masters.forEach(p => {
-        currentSnapshot[`师父_${p.item.title}`] = p.vote;
-      });
+      apprentices.forEach(p => { currentSnapshot[`徒弟_${p.item.title}`] = p.vote; });
+      masters.forEach(p => { currentSnapshot[`师父_${p.item.title}`] = p.vote; });
 
-      const newHistory = [...historyRef.current, currentSnapshot].slice(-60);
+      const newHistory = [...historyRef.current, currentSnapshot].slice(-100);
       setHistoryData(newHistory);
       historyRef.current = newHistory;
       
@@ -89,28 +78,118 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // 【核心修复】：直接从当前的实时全员名单里提取 Keys，而不是去读可能不全的历史快照
-  // 这样保证哪怕是刚加进来的选手，也会立刻被分配一条专属折线！
   const masterKeys = masterData.map(p => `师父_${p.item.title}`);
   const apprenticeKeys = apprenticeData.map(p => `徒弟_${p.item.title}`);
 
+  // ========== 🚀 ECharts 核心配置函数 ==========
+  const getEChartsOption = (keys: string[], groupPrefix: string, history: any[]) => {
+    return {
+      color: PREMIUM_COLORS, 
+      tooltip: {
+        trigger: 'item', 
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#E5E7EB',
+        borderWidth: 1,
+        padding: [10, 14],
+        textStyle: { color: '#1F2937' },
+        extraCssText: 'box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-radius: 8px;',
+        formatter: (params: any) => {
+          return `
+            <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px; border-bottom: 1px solid #F3F4F6; padding-bottom: 4px;">
+              ⏰ ${params.name}
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${params.color}; box-shadow: 0 0 6px ${params.color}80;"></span>
+              <span style="font-weight: 900; color: #111827; font-size: 13px;">${params.seriesName}</span>
+              <span style="font-family: monospace; font-weight: 900; font-size: 15px; color: ${params.color}; margin-left: 6px;">
+                ${params.value.toLocaleString()} 票
+              </span>
+            </div>
+          `;
+        }
+      },
+      legend: {
+        type: 'scroll',
+        top: 0,
+        data: keys.map(k => k.replace(groupPrefix, '')),
+        icon: 'circle',
+        itemGap: 12,
+        textStyle: { fontSize: 11, color: '#4B5563', fontWeight: 500 },
+      },
+      grid: { top: 35, left: 10, right: 20, bottom: 35, containLabel: true },
+      dataZoom: [
+        { type: 'inside', start: 0, end: 100 }, 
+        { 
+          type: 'slider', 
+          show: true, 
+          bottom: 0, 
+          height: 14,
+          borderColor: 'transparent', 
+          backgroundColor: '#F8FAFC',
+          fillerColor: 'rgba(59, 130, 246, 0.15)',
+          handleStyle: { color: '#3B82F6', borderWidth: 0 }
+        }
+      ],
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: history.map(d => d.time),
+        axisLine: { show: false }, 
+        axisTick: { show: false },
+        axisLabel: { color: '#9CA3AF', fontSize: 10, margin: 10 }
+      },
+      yAxis: {
+        type: 'value',
+        scale: true, 
+        splitLine: { lineStyle: { color: '#F1F5F9', type: 'dashed' } }, 
+        axisLabel: { color: '#9CA3AF', fontSize: 10, fontFamily: 'monospace' }
+      },
+      series: keys.map((key) => ({
+        name: key.replace(groupPrefix, ''),
+        type: 'line',
+        smooth: 0.3, 
+        
+        // 📌 核心修改：展示数据圆点，并增加白色描边提升质感
+        showSymbol: true, 
+        symbol: 'circle',
+        symbolSize: 6,
+        itemStyle: { 
+          borderColor: '#ffffff', // 圆点白色描边
+          borderWidth: 1.5 
+        },
+        lineStyle: { width: 3 }, 
+        
+        emphasis: {
+          focus: 'series',
+          lineStyle: { width: 5, shadowColor: 'rgba(0,0,0,0.2)', shadowBlur: 8 },
+          // 悬浮时，圆点瞬间放大，交互反馈更强
+          itemStyle: { symbolSize: 10, borderWidth: 2 } 
+        },
+        data: history.map(d => d[key] || null),
+      }))
+    };
+  };
+
+  // ========== 🚀 极致紧凑版列表渲染 ==========
   const renderCompactList = (data: Player[], cutoffRank: number, title: string, themeColor: string) => {
     const cutoffVote = data[cutoffRank - 1]?.vote || 0;
 
     return (
-      <div className="flex flex-col bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden h-full">
-        <div className={`text-center py-2 text-white font-black text-base tracking-widest ${themeColor} shadow-inner`}>
-          {title}
+      <div className="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
+        <div className={`text-center py-1.5 text-white font-black text-sm tracking-widest ${themeColor}`}>
+          {title} <span className='font-medium text-[10px] opacity-90'>(前 {cutoffRank} 晋级)</span>
         </div>
         
-        <div className="flex text-xs text-gray-500 bg-gray-50/50 py-1.5 px-3 border-b font-medium sticky top-0 z-10 backdrop-blur-sm">
-          <span className="w-6 text-center">排名</span>
-          <span className="w-8"></span>
-          <span className="flex-1 ml-2">选手</span>
-          <span className="w-20 text-right font-bold">票数</span>
-          <span className="w-20 text-right font-bold">距晋级线</span>
+        {/* 表头 */}
+        <div className="flex text-[11px] text-gray-500 bg-gray-50 py-1 px-2 border-b font-semibold sticky top-0 z-10">
+          <span className="w-5 text-center"> </span>
+          <span className="w-6"></span>
+          <span className="flex-1 ml-1.5">选手</span>
+          <span className="w-16 text-right font-bold">实时票数</span>
+          <span className="w-16 text-right font-bold">距线差值</span>
         </div>
 
+        {/* 列表主体：压缩 Padding，缩小字号 */}
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           {data.map((player, index) => {
             const rank = index + 1;
@@ -120,43 +199,34 @@ export default function Home() {
             const voteDiff = player.vote - cutoffVote;
             let gapElement;
             if (rank < cutoffRank) {
-              gapElement = <span className="text-green-600">+{voteDiff.toLocaleString()}</span>;
+              gapElement = <span className="text-green-500 font-bold">+{voteDiff.toLocaleString()}</span>;
             } else if (rank === cutoffRank) {
-              gapElement = <span className="text-purple-600 font-extrabold text-[13px]">守门员</span>;
+              gapElement = <span className="text-purple-600 font-black text-[11px]">守门员</span>;
             } else {
-              gapElement = <span className="text-red-500">{voteDiff.toLocaleString()}</span>;
+              gapElement = <span className="text-red-500 font-bold">{voteDiff.toLocaleString()}</span>;
             }
 
-            let rankStyle = "text-gray-500";
-            if (rank === 1) rankStyle = "text-yellow-500 font-extrabold";
-            if (rank === 2) rankStyle = "text-gray-400 font-extrabold";
-            if (rank === 3) rankStyle = "text-amber-700 font-extrabold";
+            let rankStyle = "text-gray-400 font-bold";
+            if (rank === 1) rankStyle = "text-yellow-500 font-black text-[13px]";
+            if (rank === 2) rankStyle = "text-slate-400 font-black text-[13px]";
+            if (rank === 3) rankStyle = "text-amber-700 font-black text-[13px]";
 
             return (
               <React.Fragment key={player.item_id}>
                 {rank === cutoffRank + 1 && (
-                  <div className="border-t-2 border-red-300 border-dashed w-full relative"></div>
+                  <div className="border-t-[1.5px] border-red-300 border-dashed w-full relative"></div>
                 )}
-                <div className={`flex items-center text-sm py-1 px-3 border-b border-gray-50 hover:bg-gray-100/70 transition-colors ${!isPromoted ? 'opacity-70 bg-gray-50/30' : ''}`}>
-                  <span className={`w-6 text-center font-black text-base ${rankStyle}`}>{rank}</span>
-                  <img 
-                    src={picUrl} 
-                    referrerPolicy="no-referrer"
-                    alt="avatar" 
-                    className="w-7 h-7 rounded-xl object-cover border-2 border-white shadow-sm ml-2" 
-                  />
-                  <a 
-                    href={player.item.jump_url} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex-1 ml-3 truncate font-bold text-gray-800 hover:text-blue-600 hover:underline decoration-blue-200"
-                  >
+                {/* 极限压缩行高：py-1 (4px) */}
+                <div className={`flex items-center text-xs py-1 px-2 border-b border-gray-50 hover:bg-gray-100 transition-colors ${!isPromoted ? 'opacity-60 bg-gray-50/50' : ''}`}>
+                  <span className={`w-5 text-center ${rankStyle}`}>{rank}</span>
+                  <img src={picUrl} referrerPolicy="no-referrer" alt="avatar" className="w-6 h-6 rounded object-cover border border-gray-200 ml-1.5" />
+                  <a href={player.item.jump_url} target="_blank" rel="noreferrer" className="flex-1 ml-2 truncate font-bold text-gray-800 hover:text-blue-600">
                     {player.item.title}
                   </a>
-                  <span className="w-20 text-right font-mono font-black text-base text-gray-700">
+                  <span className="w-16 text-right font-mono font-black text-[13px] text-gray-800 tracking-tighter">
                     {player.vote.toLocaleString()}
                   </span>
-                  <span className="w-20 text-right font-mono text-xs font-medium">
+                  <span className="w-16 text-right font-mono text-[11px]">
                     {gapElement}
                   </span>
                 </div>
@@ -169,13 +239,13 @@ export default function Home() {
   };
 
   return (
-    <main className="w-screen min-h-screen bg-[#F9FBFC] flex flex-col p-4 md:p-6 font-sans">
+    <main className="w-screen min-h-screen bg-[#F4F6F8] flex flex-col p-3 md:p-4 font-sans overflow-x-hidden" suppressHydrationWarning>
       
-      {/* 顶部标题栏 */}
-      <div className="flex-none flex justify-between items-center bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 mb-4 backdrop-blur-sm bg-white/95 sticky top-0 z-50">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-2xl font-black text-gray-950 tracking-tighter shadow-text-xs">🏆 瓦哩师徒杯 S3 · 数据监控看板</h1>
-          <span className="text-sm text-gray-400 font-medium">全员监控实时大盘</span>
+      {/* 顶部导航 */}
+      <div className="flex-none flex justify-between items-center bg-white/95 px-4 py-2.5 rounded-xl shadow-sm border border-gray-200 mb-3 sticky top-2 z-50">
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-xl font-black text-gray-900 tracking-tight">🏆 瓦哩师徒杯 S3</h1>
+          <span className="text-xs text-gray-500 font-medium">全景数据大屏</span>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -186,108 +256,78 @@ export default function Home() {
                 historyRef.current = [];
               }
             }}
-            className="text-[11px] text-gray-400 hover:text-red-500 px-3 py-1.5 border border-gray-100 rounded-lg hover:border-red-100 hover:bg-red-50/50 transition-all font-medium"
+            className="text-[11px] text-gray-400 hover:text-red-500 font-medium transition-colors border px-2 py-1 rounded"
           >
-            清空历史
+            清空历史记录
           </button>
-          <div className="relative flex items-center bg-purple-50/70 px-4 py-2 rounded-full border border-purple-100/50 shadow-inner">
-            <span className="animate-ping absolute h-2.5 w-2.5 rounded-full bg-purple-400 opacity-60"></span>
-            <span className="relative rounded-full h-2.5 w-2.5 bg-purple-600 mr-2.5 shadow"></span>
-            <span className="text-xs text-purple-800 font-extrabold tracking-tight">10s 刷新 | 更新于 {lastUpdated}</span>
+          <div className="relative flex items-center bg-gray-900 px-3 py-1 rounded-full shadow-md">
+            <span className="animate-ping absolute h-1.5 w-1.5 rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative rounded-full h-1.5 w-1.5 bg-green-500 mr-2"></span>
+            <span className="text-[10px] text-white font-bold tracking-widest">LIVE | {lastUpdated}</span>
           </div>
         </div>
       </div>
 
       {/* 核心数据区：上部两列列表 */}
-      <div className="flex-none grid grid-cols-2 gap-4 h-[65vh] min-h-[480px]">
-        {renderCompactList(masterData, 11, "师父组", "bg-blue-600")}
-        {renderCompactList(apprenticeData, 13, "徒弟组", "bg-purple-600")}
+      <div className="flex-none grid grid-cols-1 lg:grid-cols-2 gap-3 h-[70vh] min-h-[500px]">
+        {renderCompactList(masterData, 11, "师父组排名大盘", "bg-gradient-to-r from-blue-600 to-blue-500")}
+        {renderCompactList(apprenticeData, 13, "徒弟组排名大盘", "bg-gradient-to-r from-purple-600 to-purple-500")}
       </div>
 
-      <div className='flex-none text-center pt-8 pb-3'>
-        <h2 className='text-3xl font-black text-gray-900 tracking-tight'>📊 历史全员票数涨势总览</h2>
-        <p className='text-gray-500 mt-2 text-sm'>所有选手的历史波动将持久化存储在本地</p>
+      <div className='flex-none text-center pt-8 pb-2'>
+        <h2 className='text-2xl font-black text-gray-900 tracking-tight'>📈 选手走势</h2>
+        <p className='text-gray-500 mt-1 text-xs'>
+          交互技巧：<strong className="text-blue-500">点击图例</strong>可过滤选手 / <strong className="text-blue-500">鼠标悬浮点</strong>可查看瞬间票数 / <strong className="text-blue-500">滚轮</strong>可缩放时间轴
+        </p>
       </div>
 
-      {/* 底部折线图：分为上下两个大图 */}
-      <div className="flex-none flex flex-col gap-4">
-        
-        {/* 上方：师父组全员趋势图 */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 flex flex-col h-[400px]">
-          <div className="text-lg font-black text-blue-700 mb-2.5 ml-1 tracking-tight border-b-2 border-blue-50 pb-1 flex justify-between items-center">
-            📈 师父组全员票数波动 
-            <span className='font-mono text-xs text-gray-400 font-medium'>{masterKeys.length} 位选手</span>
+      {/* 底部折线图：双栏并排 */}
+      <div className="flex-none grid grid-cols-1 lg:grid-cols-2 gap-3 mt-2">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col h-[450px]">
+          <div className="text-base font-black text-blue-700 pb-2 flex justify-between items-center border-b border-gray-50">
+            师父组 · 历史票数曲线
+            <span className='font-mono text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded'>共 {masterKeys.length} 人</span>
           </div>
-          <div className="flex-1 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={historyData} margin={{ top: 5, right: 15, left: 15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f2f2f2" />
-                <XAxis dataKey="time" tick={{ fill: '#9CA3AF', fontSize: 11 }} tickMargin={8} />
-                <YAxis domain={['auto', 'auto']} tick={{ fill: '#9CA3AF', fontSize: 11 }} width={60} axisLine={false} tickLine={false}/>
-                <Tooltip 
-                  contentStyle={{ fontSize: '11px', padding: '12px', borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                  itemStyle={{ padding: 0, margin: '1px 0' }}
-                  cursor={{ stroke: '#E5E7EB', strokeWidth: 2 }}
-                />
-                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px', maxHeight: '120px', overflowY: 'auto' }} iconType="circle" iconSize={8} />
-                {masterKeys.map((key, i) => (
-                  <Line 
-                    key={key} 
-                    type="monotone" 
-                    dataKey={key} 
-                    name={key.replace('师父_', '')} 
-                    stroke={MASTER_PALETTE[i % MASTER_PALETTE.length]} 
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={false} 
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="flex-1 w-full mt-2">
+            {masterKeys.length > 0 && historyData.length > 0 && (
+              <ReactECharts 
+                option={getEChartsOption(masterKeys, "师父_", historyData)} 
+                style={{ height: '100%', width: '100%' }}
+                notMerge={false}
+                lazyUpdate={true}
+              />
+            )}
           </div>
         </div>
 
-        {/* 下方：徒弟组全员趋势图 */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 flex flex-col h-[400px]">
-          <div className="text-lg font-black text-purple-700 mb-2.5 ml-1 tracking-tight border-b-2 border-purple-50 pb-1 flex justify-between items-center">
-            📈 徒弟组全员票数波动
-            <span className='font-mono text-xs text-gray-400 font-medium'>{apprenticeKeys.length} 位选手</span>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col h-[450px]">
+          <div className="text-base font-black text-purple-700 pb-2 flex justify-between items-center border-b border-gray-50">
+            徒弟组 · 历史票数曲线
+            <span className='font-mono text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded'>共 {apprenticeKeys.length} 人</span>
           </div>
-          <div className="flex-1 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={historyData} margin={{ top: 5, right: 15, left: 15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f2f2f2" />
-                <XAxis dataKey="time" tick={{ fill: '#9CA3AF', fontSize: 11 }} tickMargin={8} />
-                <YAxis domain={['auto', 'auto']} tick={{ fill: '#9CA3AF', fontSize: 11 }} width={60} axisLine={false} tickLine={false}/>
-                <Tooltip 
-                  contentStyle={{ fontSize: '11px', padding: '12px', borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                  itemStyle={{ padding: 0, margin: '1px 0' }}
-                  cursor={{ stroke: '#E5E7EB', strokeWidth: 2 }}
-                />
-                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px', maxHeight: '120px', overflowY: 'auto' }} iconType="circle" iconSize={8} />
-                {apprenticeKeys.map((key, i) => (
-                  <Line 
-                    key={key} 
-                    type="monotone" 
-                    dataKey={key} 
-                    name={key.replace('徒弟_', '')}
-                    stroke={APPRENTICE_PALETTE[i % APPRENTICE_PALETTE.length]} 
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={false} 
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="flex-1 w-full mt-2">
+            {apprenticeKeys.length > 0 && historyData.length > 0 && (
+              <ReactECharts 
+                option={getEChartsOption(apprenticeKeys, "徒弟_", historyData)} 
+                style={{ height: '100%', width: '100%' }}
+                notMerge={false}
+                lazyUpdate={true}
+              />
+            )}
           </div>
         </div>
-
       </div>
 
-      {/* 底部说明 */}
-      <div className='flex-none text-center pt-10 pb-6'>
-        <p className='text-xs text-gray-400'>数据仅供参考，请以官方为准。</p>
-      </div>
+      {/* 页面尾部：作者信息 */}
+      <footer className='flex-none text-center pt-10 pb-6'>
+        <div className="w-16 h-1 bg-gray-200 mx-auto rounded-full mb-4"></div>
+        <p className='text-xs text-gray-500 font-medium'>
+          Made with <span className="text-red-500">❤️</span> by <span className="font-bold text-gray-700">Slie-wdy</span>
+        </p>
+        <p className='text-[10px] text-gray-400 mt-1'>
+          瓦哩师徒杯 S3 实时数据监控看板 · 数据源自官方 API 仅供参考
+        </p>
+      </footer>
 
     </main>
   );
