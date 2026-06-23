@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         B站瓦哩师徒杯S3真实票数显示
 // @namespace    https://github.com/SlieFamily/bilibili-wali-vote
-// @version      1.0.0
+// @version      2.0.1
 // @description  自动获取并覆写B站瓦哩师徒杯S3真实的投票数（消除“万”字模糊显示，精确到个位）
 // @author       Slie-wdy
 // @match        *://live.bilibili.com/blackboard/era/*
