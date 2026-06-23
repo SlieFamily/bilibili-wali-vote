@@ -9,8 +9,10 @@
 // @grant        none
 // @run-at       document-start
 // @license      MIT
+// @homepageURL  https://greasyfork.org/zh-CN/scripts/583568-b%E7%AB%99%E7%93%A6%E5%93%A9%E5%B8%88%E5%BE%92%E6%9D%AFs3%E7%9C%9F%E5%AE%9E%E7%A5%A8%E6%95%B0%E6%98%BE%E7%A4%BA
 // @supportURL   https://github.com/SlieFamily/bilibili-wali-vote/issues
-// @homepageURL  https://github.com/SlieFamily/bilibili-wali-vote
+// @downloadURL  https://raw.githubusercontent.com/SlieFamily/bilibili-wali-vote/main/bilibili-wali-vote.user.js
+// @updateURL    https://raw.githubusercontent.com/SlieFamily/bilibili-wali-vote/main/bilibili-wali-vote.user.js
 // ==/UserScript==
 
 (function() {
